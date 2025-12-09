@@ -4,7 +4,6 @@
 
 L'erreur `500 Internal Server Error` sur `/api/ai/tutor/` indique que la clé API Gemini n'est pas valide ou mal configurée.
 
-La clé actuelle dans votre `.env` (`gen-lang-client-0474647922`) ne semble pas être une vraie clé API Gemini.
 
 ## Comment Obtenir une Clé API Gemini Valide
 
@@ -29,10 +28,8 @@ Ouvrez le fichier `/backend/.env` et modifiez la ligne 55 :
 
 ```env
 # Remplacez cette ligne :
-GEMINI_API_KEY=gen-lang-client-0474647922
-
-# Par votre vraie clé :
 GEMINI_API_KEY=AIzaSyXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
 ```
 
 **Option B : Variable d'Environnement**
