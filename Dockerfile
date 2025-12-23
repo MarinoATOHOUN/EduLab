@@ -49,4 +49,4 @@ ENV DB_HOST=""
 # Hugging Face écoute sur le port 7860
 EXPOSE 7860
 
-CMD ["./start.sh"]
+CMD ["python", "app.py"]
