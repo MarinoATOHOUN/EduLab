@@ -1,5 +1,4 @@
-
-import api from './api';
+import api, { publicApi } from './api';
 
 export interface LearningTool {
     id: number;
@@ -19,7 +18,8 @@ export interface LearningTool {
 
 export const toolsService = {
     getTools: async (): Promise<LearningTool[]> => {
-        const response = await api.get('learning-tools/');
+        const response = await publicApi.get('learning-tools/');
         return response.data.results || response.data;
     }
 };
+

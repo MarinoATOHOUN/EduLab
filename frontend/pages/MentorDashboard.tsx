@@ -8,7 +8,7 @@ import {
     Clock,
     CheckCircle,
     XCircle,
-    Video,
+    MessageSquare as ChatIcon,
     MoreHorizontal,
     Star,
     Award,
@@ -24,29 +24,7 @@ import { UserRole, Mentor } from '../types';
 import EditProfileModal from '../components/EditProfileModal';
 import ManageAvailabilityModal from '../components/ManageAvailabilityModal';
 import { mentorService, bookingsService } from '../services';
-
-interface Booking {
-    id: string;
-    student: {
-        id: string;
-        profile?: {
-            name: string;
-            avatar?: string;
-            university?: string;
-            country?: string;
-        };
-        email: string;
-    };
-    mentor: any;
-    date: string;
-    time: string;
-    status: 'PENDING' | 'CONFIRMED' | 'REJECTED' | 'COMPLETED' | 'CANCELLED';
-    status_label: string;
-    domains: string[];
-    expectation: string;
-    main_question: string;
-    created_at: string;
-}
+import type { Booking } from '../services';
 
 const MentorDashboard: React.FC = () => {
     const { user, isAuthenticated } = useAuth();
@@ -182,14 +160,25 @@ const MentorDashboard: React.FC = () => {
     };
 
     const STATS = [
-        { label: 'Sessions totales', value: stats.totalSessions.toString(), icon: <Video size={24} />, color: 'bg-blue-500' },
+        { label: 'Sessions totales', value: stats.totalSessions.toString(), icon: <ChatIcon size={24} />, color: 'bg-blue-500' },
         { label: 'Étudiants aidés', value: stats.studentsHelped.toString(), icon: <Users size={24} />, color: 'bg-green-500' },
         { label: 'Note moyenne', value: stats.averageRating.toFixed(1), icon: <Star size={24} />, color: 'bg-yellow-500' },
         { label: 'Heures ce mois', value: `${stats.monthlyHours}h`, icon: <Clock size={24} />, color: 'bg-purple-500' },
     ];
 
     const upcomingBookings = bookings
-        .filter(b => b.status === 'CONFIRMED' && new Date(b.date) >= new Date())
+        .filter(b => {
+            if (b.status !== 'CONFIRMED') return false;
+
+            // Parse YYYY-MM-DD manually to avoid timezone issues
+            const [year, month, day] = b.date.split('-').map(Number);
+            const bookingDate = new Date(year, month - 1, day);
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            return bookingDate >= today;
+        })
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
         .slice(0, 5);
 
@@ -313,6 +302,48 @@ const MentorDashboard: React.FC = () => {
         </div>
     );
 
+    const renderConfirmedCard = (booking: Booking) => (
+        <div key={booking.id} className="bg-white dark:bg-gray-800 p-6 rounded-2xl border-l-4 border-l-green-500 border-y border-r border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex justify-between items-start mb-4">
+                <div className="flex items-center gap-4">
+                    <button onClick={() => openStudentProfile(booking.student)} className="relative group">
+                        <img
+                            src={booking.student.profile?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(booking.student.profile?.name || booking.student.email)}`}
+                            alt={booking.student.profile?.name || booking.student.email}
+                            className="w-12 h-12 rounded-full object-cover border-2 border-green-100 dark:border-green-900/30 group-hover:border-green-500 transition-colors"
+                        />
+                    </button>
+                    <div>
+                        <h4 className="font-bold text-gray-900 dark:text-white">
+                            {booking.student.profile?.name || booking.student.email}
+                        </h4>
+                        <div className="flex items-center gap-3 text-xs font-medium">
+                            <span className="flex items-center gap-1 text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-0.5 rounded-full">
+                                <CheckCircle size={12} /> Confirmé
+                            </span>
+                            <span className="text-gray-400">•</span>
+                            <span className="text-gray-500 dark:text-gray-400">{booking.domains[0] || "Session"}</span>
+                        </div>
+                    </div>
+                </div>
+                <div className="text-right">
+                    <div className="font-bold text-gray-900 dark:text-white">{formatDate(booking.date)}</div>
+                    <div className="text-edu-secondary text-sm font-medium">{formatTime(booking.time)}</div>
+                </div>
+            </div>
+
+            <div className="flex gap-3 mt-4">
+                <Link
+                    to={`/chat?partner=${booking.student.id}`}
+                    className="flex-grow flex items-center justify-center gap-2 px-4 py-3 bg-edu-primary text-white rounded-xl text-sm font-bold hover:bg-edu-secondary transition-colors shadow-sm"
+                >
+                    <MessageSquare size={16} />
+                    Ouvrir le chat
+                </Link>
+            </div>
+        </div>
+    );
+
     const renderOverview = () => (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
             {/* Stats Grid */}
@@ -331,23 +362,61 @@ const MentorDashboard: React.FC = () => {
             </div>
 
             <div className="grid lg:grid-cols-3 gap-8">
-                {/* Pending Requests Preview */}
-                <div className="lg:col-span-2 space-y-6">
-                    <div className="flex justify-between items-center">
-                        <h3 className="font-bold text-xl text-gray-900 dark:text-white">Demandes récentes</h3>
-                        <button onClick={() => setActiveTab('requests')} className="text-sm text-edu-secondary hover:underline font-medium">Voir tout</button>
+                {/* Main Content Column */}
+                <div className="lg:col-span-2 space-y-10">
+
+                    {/* Pending Requests Section */}
+                    <div className="space-y-6">
+                        <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                                <h3 className="font-bold text-xl text-gray-900 dark:text-white">Demandes en attente</h3>
+                                {pendingRequests.length > 0 && (
+                                    <span className="bg-orange-100 text-orange-600 text-xs px-2 py-0.5 rounded-full font-bold">
+                                        {pendingRequests.length}
+                                    </span>
+                                )}
+                            </div>
+                            <button onClick={() => setActiveTab('requests')} className="text-sm text-edu-secondary hover:underline font-medium">Voir tout</button>
+                        </div>
+
+                        <div className="space-y-4">
+                            {pendingRequests.slice(0, 2).map(req => renderRequestCard(req))}
+                            {pendingRequests.length === 0 && (
+                                <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 text-center border border-dashed border-gray-200 dark:border-gray-700">
+                                    <div className="w-12 h-12 bg-gray-50 dark:bg-gray-900/50 rounded-full flex items-center justify-center mx-auto mb-3 text-gray-400">
+                                        <MessageSquare size={20} />
+                                    </div>
+                                    <p className="text-gray-500 dark:text-gray-400 text-sm">Aucune nouvelle demande.</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
-                    <div className="space-y-4">
-                        {pendingRequests.slice(0, 3).map(req => renderRequestCard(req))}
-                        {pendingRequests.length === 0 && (
-                            <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 text-center border border-gray-100 dark:border-gray-700">
-                                <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400">
-                                    <MessageSquare size={24} />
-                                </div>
-                                <p className="text-gray-500 dark:text-gray-400">Aucune demande en attente pour le moment.</p>
+                    {/* Confirmed Sessions Section */}
+                    <div className="space-y-6">
+                        <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                                <h3 className="font-bold text-xl text-gray-900 dark:text-white">Séances confirmées</h3>
+                                {upcomingBookings.length > 0 && (
+                                    <span className="bg-green-100 text-green-600 text-xs px-2 py-0.5 rounded-full font-bold">
+                                        {upcomingBookings.length}
+                                    </span>
+                                )}
                             </div>
-                        )}
+                            <button onClick={() => setActiveTab('sessions')} className="text-sm text-edu-secondary hover:underline font-medium">Calendrier</button>
+                        </div>
+
+                        <div className="grid sm:grid-cols-2 gap-4">
+                            {upcomingBookings.slice(0, 4).map(booking => renderConfirmedCard(booking))}
+                            {upcomingBookings.length === 0 && (
+                                <div className="sm:col-span-2 bg-white dark:bg-gray-800 rounded-2xl p-8 text-center border border-dashed border-gray-200 dark:border-gray-700">
+                                    <div className="w-12 h-12 bg-gray-50 dark:bg-gray-900/50 rounded-full flex items-center justify-center mx-auto mb-3 text-gray-400">
+                                        <Calendar size={20} />
+                                    </div>
+                                    <p className="text-gray-500 dark:text-gray-400 text-sm">Aucune séance confirmée à venir.</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 

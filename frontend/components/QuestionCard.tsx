@@ -128,13 +128,19 @@ const QuestionCard: React.FC<Props> = ({ question, onAnswerAdded }) => {
           </div>
 
           <div className="flex flex-wrap gap-2 mb-4">
-            {question.tags.map(tag => (
-              <span key={tag} className="px-2.5 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 text-xs rounded-full font-medium border border-blue-100 dark:border-blue-800">
-                {tag}
-              </span>
-            ))}
-          </div>
+            {question.tags.map((tag, index) => {
+              const isLevel = ['université', 'lycée', 'collège', 'licence', 'master', 'doctorat', 'primaire', 'l1', 'l2', 'l3', 'm1', 'm2', '6ème', '5ème', '4ème', '3ème', '2nde', '1ère', 'tle', 'terminale'].includes(tag.toLowerCase());
+              const tagClass = isLevel
+                ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-800'
+                : 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 border-blue-100 dark:border-blue-800';
 
+              return (
+                <span key={`${tag}-${index}`} className={`px-2.5 py-0.5 text-xs rounded-full font-medium border transition-colors ${tagClass}`}>
+                  {tag}
+                </span>
+              );
+            })}
+          </div>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-700 pt-3 gap-4 sm:gap-0">
             <div className="flex items-center space-x-2">
               <img src={question.author.avatar} alt={question.author.name} className="w-5 h-5 rounded-full" />
@@ -282,3 +288,5 @@ const QuestionCard: React.FC<Props> = ({ question, onAnswerAdded }) => {
 };
 
 export default QuestionCard;
+
+

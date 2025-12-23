@@ -201,27 +201,13 @@ class ConversationViewSet(HashIdMixin, viewsets.ModelViewSet):
         )
         serializer.is_valid(raise_exception=True)
         
-        # On surcharge la méthode create du serializer pour gérer ce champ ? 
-        # Non, MessageCreateSerializer.create fait le create.
-        # On va modifier MessageCreateSerializer pour accepter un argument extra ou on update après.
-        # Update après est moins performant (2 DB calls) mais plus simple sans toucher au serializer complexe.
-        
         message = serializer.save()
         
         if is_visible:
             message.is_visible_to_recipient = True
             message.save(update_fields=['is_visible_to_recipient'])
         
-        # Broadcast to WebSocket
-        # IMPORTANT: Si le message est caché, faut-il l'envoyer par WS ?
-        # OUI, mais le frontend du destinataire doit savoir qu'il est caché (ou ne pas l'afficher).
-        # MAIS si on l'envoie, le destinataire reçoit la data. C'est "envoyé mais pas vu".
-        # Le user a dit "le destinataire ne le voit pas".
-        # Si on l'envoie par WS, le JS le reçoit.
-        # On devrait peut-être NE PAS l'envoyer au destinataire via WS si caché.
-        # Ou l'envoyer avec un flag "hidden" et le front ne l'affiche pas ?
-        # Sécurité: Mieux vaut ne pas l'envoyer au destinataire.
-        
+        # Broadcast to WebSocket avec les infos de visibilité
         try:
             from channels.layers import get_channel_layer
             from asgiref.sync import async_to_sync
@@ -230,26 +216,28 @@ class ConversationViewSet(HashIdMixin, viewsets.ModelViewSet):
             
             msg_data = MessageSerializer(message).data
             
-            # Envoyer au groupe du chat
-            # Problème: le groupe inclut les deux users.
-            # Si on envoie, les deux reçoivent.
-            # On ne peut pas filtrer par destinataire facilement ici sauf si on a des groupes par user.
-            # Solution: Envoyer le message avec le champ 'is_visible_to_recipient'.
-            # Le frontend devra filtrer. C'est acceptable car ce n'est pas une donnée ultra sensible, juste une règle métier.
-            # Et le serializer inclut déjà 'is_visible_to_recipient' ? Non, il faut l'ajouter au serializer.
-            
             async_to_sync(channel_layer.group_send)(
                 f'chat_{conversation.id}',
                 {
                     'type': 'chat_message',
-                    'message': msg_data
+                    'message': msg_data,
+                    'sender_id': request.user.id,
+                    'is_visible': is_visible
                 }
             )
         except Exception as e:
             pass
         
+        # Préparer la réponse
+        response_data = MessageSerializer(message).data
+        
+        # Ajouter un avertissement si le message est en attente
+        if not is_visible:
+            response_data['queued'] = True
+            response_data['queued_message'] = "Votre message sera délivré au destinataire lors de votre prochain rendez-vous."
+        
         return Response(
-            MessageSerializer(message).data,
+            response_data,
             status=status.HTTP_201_CREATED
         )
 

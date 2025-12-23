@@ -122,6 +122,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setNotifications(prev => [newNotif, ...prev]);
       });
 
+      // Initialiser le chiffrement automatiquement
+      const initEncryption = async () => {
+        try {
+          const { encryptionService } = await import('../services/encryption');
+          await encryptionService.initializeEncryption();
+          console.log('Chiffrement initialisé automatiquement');
+        } catch (error) {
+          console.error('Erreur lors de l\'initialisation du chiffrement:', error);
+        }
+      };
+      initEncryption();
+
       return () => {
         socket.close();
       };

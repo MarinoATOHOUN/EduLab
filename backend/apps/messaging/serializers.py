@@ -50,7 +50,30 @@ class ConversationSerializer(serializers.ModelSerializer):
         return UserSerializer([p.user for p in parts], many=True).data
     
     def get_last_message(self, obj):
-        last_msg = obj.messages.filter(is_active=True).last()
+        """
+        Retourne le dernier message VISIBLE pour l'utilisateur actuel.
+        - Si l'utilisateur est l'expéditeur, il voit son message
+        - Sinon, le message doit avoir is_visible_to_recipient=True
+        """
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            # Sans contexte, on affiche le dernier message visible
+            last_msg = obj.messages.filter(
+                is_active=True,
+                is_visible_to_recipient=True
+            ).last()
+            return MessageSerializer(last_msg).data if last_msg else None
+        
+        from django.db.models import Q
+        
+        # Messages que l'utilisateur peut voir:
+        # 1. Messages qu'il a envoyés (sender=me)
+        # 2. Messages visibles (is_visible_to_recipient=True)
+        visible_messages = obj.messages.filter(is_active=True).filter(
+            Q(sender=request.user) | Q(is_visible_to_recipient=True)
+        )
+        
+        last_msg = visible_messages.order_by('-created_at').first()
         return MessageSerializer(last_msg).data if last_msg else None
     
     def get_unread_count(self, obj):
@@ -61,8 +84,20 @@ class ConversationSerializer(serializers.ModelSerializer):
                 is_active=True
             ).first()
             if participant:
-                return participant.get_unread_count()
+                # Compter uniquement les messages non lus ET visibles
+                from django.db.models import Q
+                if not participant.last_read_at:
+                    return obj.messages.filter(
+                        is_active=True,
+                        is_visible_to_recipient=True
+                    ).exclude(sender=request.user).count()
+                return obj.messages.filter(
+                    is_active=True,
+                    is_visible_to_recipient=True,
+                    created_at__gt=participant.last_read_at
+                ).exclude(sender=request.user).count()
         return 0
+
 
 class MessageCreateSerializer(serializers.Serializer):
     content = serializers.CharField(required=False, allow_blank=True)

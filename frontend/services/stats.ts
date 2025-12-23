@@ -1,4 +1,4 @@
-import api from './api';
+import api, { publicApi } from './api';
 
 export interface PlatformStats {
     active_students: number;
@@ -21,7 +21,7 @@ export const statsService = {
      * Récupérer les statistiques de la plateforme
      */
     getPlatformStats: async (): Promise<PlatformStats> => {
-        const response = await api.get('stats/');
+        const response = await publicApi.get('stats/');
         return response.data;
     },
 
@@ -29,8 +29,9 @@ export const statsService = {
      * Récupérer les statistiques d'impact configurables
      */
     getImpactStats: async (): Promise<ImpactStat[]> => {
-        const response = await api.get('impact-stats/');
+        const response = await publicApi.get('impact-stats/');
         // L'API retourne une liste paginée par défaut avec DRF, donc results
         return response.data.results || response.data;
     }
 };
+

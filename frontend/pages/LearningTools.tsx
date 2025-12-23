@@ -63,6 +63,9 @@ const LearningTools: React.FC = () => {
       navigate('/tools/coloring');
     } else if (toolId === 'calc') {
       navigate('/tools/calculator');
+    } else if (toolId === 'chem') {
+      // Ouvrir le laboratoire chimique déployé sur Vercel
+      window.open('https://virtual-labo-chimique.vercel.app/', '_blank');
     } else {
       alert(`Lancement de l'outil : ${toolTitle} (Version démo)`);
     }

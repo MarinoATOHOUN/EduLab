@@ -9,7 +9,7 @@ interface Props {
 }
 
 const EditProfileModal: React.FC<Props> = ({ isOpen, onClose }) => {
-    const { user, updateUser, mentorProfile, updateMentorProfile } = useAuth();
+    const { user, updateUser, mentorProfile, updateMentorProfile, refreshUser } = useAuth();
 
     // Basic User Form Data
     const [userData, setUserData] = useState({

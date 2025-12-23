@@ -185,16 +185,23 @@ const QuestionDetail: React.FC = () => {
                                         </div>
                                         {q.tags && q.tags.length > 0 && (
                                             <div className="flex flex-wrap gap-1 mt-2">
-                                                {q.tags.slice(0, 2).map(tag => (
-                                                    <span
-                                                        key={tag}
-                                                        className="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 text-xs rounded-full"
-                                                    >
-                                                        {tag}
-                                                    </span>
-                                                ))}
+                                                {q.tags.slice(0, 2).map((tag, index) => {
+                                                    const isLevel = ['université', 'lycée', 'collège', 'licence', 'master', 'doctorat', 'primaire', 'l1', 'l2', 'l3', 'm1', 'm2', '6ème', '5ème', '4ème', '3ème', '2nde', '1ère', 'tle', 'terminale'].includes(tag.toLowerCase());
+                                                    return (
+                                                        <span
+                                                            key={`${tag}-${index}`}
+                                                            className={`px-2 py-0.5 text-[10px] rounded-full font-medium border ${isLevel
+                                                                ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-800'
+                                                                : 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 border-blue-100 dark:border-blue-800'
+                                                                }`}
+                                                        >
+                                                            {tag}
+                                                        </span>
+                                                    );
+                                                })}
                                             </div>
                                         )}
+
                                     </div>
                                 ))}
                             </div>

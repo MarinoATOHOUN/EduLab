@@ -11,9 +11,10 @@ export interface Booking {
     date: string;
     time: string;
     status: 'PENDING' | 'CONFIRMED' | 'REJECTED' | 'COMPLETED' | 'CANCELLED';
-    domains?: string[];
-    expectation?: string;
-    main_question?: string;
+    status_label: string;
+    domains: string[];
+    expectation: string;
+    main_question: string;
     created_at: string;
 }
 
@@ -26,28 +27,39 @@ const getAvatarUrl = (avatar: string | null | undefined, name: string) => {
 };
 
 // Helper to map backend booking to frontend booking
-const mapBooking = (b: any): Booking => ({
-    id: b.id ? b.id.toString() : '',
-    student: {
-        ...b.student,
-        id: b.student?.id ? b.student.id.toString() : '',
-        name: b.student?.profile?.name || 'Étudiant',
-        avatar: getAvatarUrl(b.student?.profile?.avatar, b.student?.profile?.name),
-    },
-    mentor: {
-        ...b.mentor,
-        id: b.mentor?.id ? b.mentor.id.toString() : '',
-        name: b.mentor?.profile?.name || 'Mentor',
-        avatar: getAvatarUrl(b.mentor?.profile?.avatar, b.mentor?.profile?.name),
-    },
-    date: b.date,
-    time: b.time,
-    status: b.status,
-    domains: Array.isArray(b.domains) ? b.domains : [],
-    expectation: b.expectation || '',
-    main_question: b.main_question || '',
-    created_at: b.created_at
-});
+const mapBooking = (b: any): Booking => {
+    const statusLabels: Record<string, string> = {
+        'PENDING': 'En attente',
+        'CONFIRMED': 'Confirmé',
+        'REJECTED': 'Refusé',
+        'COMPLETED': 'Terminé',
+        'CANCELLED': 'Annulé'
+    };
+
+    return {
+        id: b.id ? b.id.toString() : '',
+        student: {
+            ...b.student,
+            id: b.student?.id ? b.student.id.toString() : '',
+            name: b.student?.profile?.name || 'Étudiant',
+            avatar: getAvatarUrl(b.student?.profile?.avatar, b.student?.profile?.name),
+        },
+        mentor: {
+            ...b.mentor,
+            id: b.mentor?.id ? b.mentor.id.toString() : '',
+            name: b.mentor?.profile?.name || 'Mentor',
+            avatar: getAvatarUrl(b.mentor?.profile?.avatar, b.mentor?.profile?.name),
+        },
+        date: b.date,
+        time: b.time,
+        status: b.status,
+        status_label: statusLabels[b.status] || b.status,
+        domains: Array.isArray(b.domains) ? b.domains : [],
+        expectation: b.expectation || '',
+        main_question: b.main_question || '',
+        created_at: b.created_at
+    };
+};
 
 export const bookingsService = {
     // Récupérer mes réservations

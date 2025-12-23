@@ -287,11 +287,15 @@ class MentorApplicationSerializer(serializers.ModelSerializer):
     class Meta:
         model = MentorApplication
         fields = [
-            'id', 'user', 'cv_file', 'status', 'bio', 'university',
+            'id', 'user', 'cv_file', 'id_card_photo', 'status', 'bio', 'university',
             'specialties', 'availability', 'linkedin', 'twitter', 'website',
+            'ai_status', 'ai_recommendation', 'ai_score', 'ai_validated',
             'created_at'
         ]
-        read_only_fields = ['id', 'user', 'status', 'created_at']
+        read_only_fields = [
+            'id', 'user', 'status', 'ai_status', 'ai_recommendation', 
+            'ai_score', 'ai_validated', 'created_at'
+        ]
         
     def validate_cv_file(self, value):
         if not value.name.endswith('.pdf'):

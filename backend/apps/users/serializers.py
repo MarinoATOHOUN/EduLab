@@ -93,17 +93,24 @@ class UserRegistrationSerializer(serializers.Serializer):
         country = validated_data.pop('country', None)
         university = validated_data.pop('university', None)
         
-        # Créer l'utilisateur
+        # Créer l'utilisateur (déclenche le signal post_save qui crée un profil de base)
         user = User.objects.create_user(**validated_data)
         
-        # Créer le profil
-        profile = UserProfile.objects.create(user=user, name=name)
+        # Récupérer le profil créé par le signal et le mettre à jour avec les vraies infos
+        profile = UserProfile.objects.filter(user=user).first()
+        if not profile:
+            # Au cas où le signal n'aurait pas fonctionné
+            profile = UserProfile.objects.create(user=user, name=name, is_current=True)
+        else:
+            profile.name = name
+            profile.is_current = True  # S'assurer que le profil est actif
+            profile.save()
         
         if country:
-            UserCountry.objects.create(profile=profile, country=country)
+            UserCountry.objects.update_or_create(profile=profile, defaults={'country': country, 'is_current': True})
         
         if university:
-            UserUniversity.objects.create(profile=profile, university=university)
+            UserUniversity.objects.update_or_create(profile=profile, defaults={'university': university, 'is_current': True})
         
         return user
 

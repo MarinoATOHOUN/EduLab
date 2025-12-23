@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -6,9 +6,10 @@ ENV PYTHONDONTWRITEBYTECODE=1
 WORKDIR /app
 
 # Installer les dépendances système
-RUN apt-get update && apt-get install -y \\
-    postgresql-client \\
-    gcc \\
+RUN apt-get update && apt-get install -y \
+    postgresql-client \
+    gcc \
+    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copier requirements
@@ -27,4 +28,4 @@ RUN python manage.py collectstatic --noinput
 
 EXPOSE 8000
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "educonnect_api.wsgi:application"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "educonnect.wsgi:application"]

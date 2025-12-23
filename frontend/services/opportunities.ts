@@ -1,4 +1,4 @@
-import api from './api';
+import api, { publicApi } from './api';
 import { Opportunity, OpportunityType } from '../types';
 
 // Service Opportunities
@@ -33,7 +33,7 @@ export const opportunityService = {
         type?: string;
         search?: string;
     }): Promise<{ count: number; results: Opportunity[] }> => {
-        const response = await api.get('opportunities/', { params });
+        const response = await publicApi.get('opportunities/', { params });
         return {
             count: response.data.count,
             results: response.data.results.map(mapOpportunity)
@@ -42,7 +42,8 @@ export const opportunityService = {
 
     // Récupérer une opportunité par ID
     getOpportunity: async (id: string): Promise<Opportunity> => {
-        const response = await api.get(`opportunities/${id}/`);
+        const response = await publicApi.get(`opportunities/${id}/`);
         return mapOpportunity(response.data);
     }
 };
+

@@ -89,7 +89,6 @@ class BookingViewSet(HashIdMixin, viewsets.ModelViewSet):
         
         bookings = Booking.objects.filter(
             mentor=request.user,
-            status='PENDING',
             is_active=True
         ).order_by('date', 'time')
         

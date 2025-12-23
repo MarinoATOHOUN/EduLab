@@ -1,5 +1,4 @@
-
-import api from './api';
+import api, { publicApi } from './api';
 
 export interface SocialLink {
     id: number;
@@ -12,7 +11,8 @@ export interface SocialLink {
 
 export const socialLinkService = {
     getSocialLinks: async (): Promise<SocialLink[]> => {
-        const response = await api.get('social-links/');
+        const response = await publicApi.get('social-links/');
         return response.data.results || response.data;
     }
 };
+

@@ -37,6 +37,7 @@ const BecomeMentorModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const [specialties, setSpecialties] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [cvFile, setCvFile] = useState<File | null>(null);
+  const [idCardFile, setIdCardFile] = useState<File | null>(null);
   const [availabilitySlots, setAvailabilitySlots] = useState<AvailabilitySlot[]>([
     { day: 'MONDAY', startTime: '18:00', endTime: '20:00' }
   ]);
@@ -80,14 +81,30 @@ const BecomeMentorModal: React.FC<Props> = ({ isOpen, onClose }) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       if (file.type !== 'application/pdf') {
-        setError("Le fichier doit être un PDF.");
+        setError("Le fichier CV doit être un PDF.");
         return;
       }
       if (file.size > 5 * 1024 * 1024) {
-        setError("Le fichier ne doit pas dépasser 5 Mo.");
+        setError("Le fichier CV ne doit pas dépasser 5 Mo.");
         return;
       }
       setCvFile(file);
+      setError(null);
+    }
+  };
+
+  const handleIdCardChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      if (!file.type.startsWith('image/')) {
+        setError("La photo d'identité doit être une image (JPG, PNG).");
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        setError("La photo d'identité ne doit pas dépasser 5 Mo.");
+        return;
+      }
+      setIdCardFile(file);
       setError(null);
     }
   };
@@ -98,6 +115,11 @@ const BecomeMentorModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
     if (!cvFile) {
       setError("Veuillez télécharger votre CV (PDF).");
+      return;
+    }
+
+    if (!idCardFile) {
+      setError("Veuillez télécharger votre photo d'identité.");
       return;
     }
 
@@ -116,6 +138,7 @@ const BecomeMentorModal: React.FC<Props> = ({ isOpen, onClose }) => {
       data.append('twitter', formData.twitter);
       data.append('website', formData.website);
       data.append('cv_file', cvFile);
+      data.append('id_card_photo', idCardFile);
 
       // JSON data
       data.append('specialties', JSON.stringify(specialties));
@@ -231,30 +254,58 @@ const BecomeMentorModal: React.FC<Props> = ({ isOpen, onClose }) => {
               ></textarea>
             </div>
 
-            {/* CV Upload */}
-            <div>
-              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1.5">Curriculum Vitae (CV)</label>
-              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 flex flex-col items-center justify-center text-center hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer relative">
-                <input
-                  type="file"
-                  accept=".pdf"
-                  onChange={handleFileChange}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                />
-                <div className="bg-edu-secondary/10 p-3 rounded-full mb-3">
-                  <Upload className="text-edu-secondary" size={24} />
+            {/* CV & ID Card Upload */}
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1.5">Curriculum Vitae (CV)</label>
+                <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 flex flex-col items-center justify-center text-center hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer relative h-40">
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    onChange={handleFileChange}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <div className="bg-edu-secondary/10 p-3 rounded-full mb-3">
+                    <Upload className="text-edu-secondary" size={24} />
+                  </div>
+                  {cvFile ? (
+                    <div>
+                      <p className="text-sm font-bold text-gray-800 dark:text-white line-clamp-1 px-2">{cvFile.name}</p>
+                      <p className="text-xs text-gray-500">{(cvFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Télécharger CV</p>
+                      <p className="text-xs text-gray-500 mt-1">PDF uniquement (Max 5 Mo)</p>
+                    </div>
+                  )}
                 </div>
-                {cvFile ? (
-                  <div>
-                    <p className="text-sm font-bold text-gray-800 dark:text-white">{cvFile.name}</p>
-                    <p className="text-xs text-gray-500">{(cvFile.size / 1024 / 1024).toFixed(2)} MB</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1.5">Photo d'Identité</label>
+                <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 flex flex-col items-center justify-center text-center hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer relative h-40">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleIdCardChange}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <div className="bg-edu-accent/10 p-3 rounded-full mb-3">
+                    <Upload className="text-edu-accent" size={24} />
                   </div>
-                ) : (
-                  <div>
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Cliquez pour télécharger votre CV</p>
-                    <p className="text-xs text-gray-500 mt-1">Format PDF uniquement (Max 5 Mo)</p>
-                  </div>
-                )}
+                  {idCardFile ? (
+                    <div>
+                      <p className="text-sm font-bold text-gray-800 dark:text-white line-clamp-1 px-2">{idCardFile.name}</p>
+                      <p className="text-xs text-gray-500">{(idCardFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Télécharger Photo ID</p>
+                      <p className="text-xs text-gray-500 mt-1">Image JPG/PNG (Max 5 Mo)</p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

@@ -136,6 +136,21 @@ class MentorApplication(TimestampMixin, SoftDeleteMixin):
     twitter = models.URLField(max_length=500, blank=True)
     website = models.URLField(max_length=500, blank=True)
     
+    # Nouveau champ : Photo d'Identité
+    id_card_photo = models.ImageField(upload_to='mentors/ids/', null=True, blank=True)
+    
+    # Champs pour l'analyse IA
+    AI_STATUS_CHOICES = [
+        ('PENDING', 'En attente'),
+        ('PROCESSING', 'En cours d\'analyse'),
+        ('COMPLETED', 'Analyse terminée'),
+        ('FAILED', 'Échec de l\'analyse'),
+    ]
+    ai_status = models.CharField(max_length=20, choices=AI_STATUS_CHOICES, default='PENDING')
+    ai_recommendation = models.TextField(blank=True, verbose_name="Recommandation IA")
+    ai_score = models.IntegerField(null=True, blank=True, verbose_name="Score de confiance IA")
+    ai_validated = models.BooleanField(default=False, verbose_name="Validé par l'IA")
+    
     class Meta:
         db_table = 'mentor_applications'
         ordering = ['-created_at']

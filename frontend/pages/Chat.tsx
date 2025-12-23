@@ -16,6 +16,7 @@ const Chat: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
+  const [queuedNotification, setQueuedNotification] = useState<string | null>(null);
 
   // Encryption State
   const [myKeys, setMyKeys] = useState<{ publicKey: string; privateKey: string } | null>(null);
@@ -176,10 +177,19 @@ const Chat: React.FC = () => {
           // Use string comparison for Hashids
           const others = participants.filter(p => p.id !== user.id);
 
+          console.log('🔐 Vérification du chiffrement:');
+          console.log('  - Mes clés:', myKeys ? 'Présentes' : 'Absentes');
+          console.log('  - Autres participants:', others.length);
+          others.forEach((p, i) => {
+            console.log(`  - Participant ${i + 1}:`, p.profile.name);
+            console.log(`    - public_key:`, p.profile.public_key ? 'Présente ✓' : 'Absente ✗');
+          });
+
           // On peut chiffrer si j'ai mes clés et que les autres ont leurs clés publiques
           // Note: Pour l'instant on ne chiffre que si tout le monde a une clé.
           // En production, on pourrait avoir un mode hybride ou avertir l'utilisateur.
           const canEncrypt = others.every(p => p.profile.public_key);
+          console.log('  - Chiffrement possible:', canEncrypt ? 'OUI ✓' : 'NON ✗');
 
           if (canEncrypt) {
             const aesKey = encryptionService.generateAESKey();
@@ -231,8 +241,12 @@ const Chat: React.FC = () => {
       }));
 
       // Notification si message en attente
-      if (newMessage.is_visible_to_recipient === false) {
-        // Message en attente
+      if (newMessage.is_visible_to_recipient === false || (newMessage as any).queued) {
+        const msg = (newMessage as any).queued_message ||
+          "Votre message sera délivré au destinataire lors de votre prochain rendez-vous.";
+        setQueuedNotification(msg);
+        // Auto-dismiss après 5 secondes
+        setTimeout(() => setQueuedNotification(null), 5000);
       }
 
       setMessageInput('');
@@ -291,6 +305,22 @@ const Chat: React.FC = () => {
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden h-[calc(100dvh-140px)] flex animate-in fade-in duration-300 relative">
+
+      {/* Toast notification pour les messages en attente */}
+      {queuedNotification && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-4 fade-in duration-300">
+          <div className="flex items-center gap-3 bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 px-4 py-3 rounded-xl shadow-lg border border-amber-200 dark:border-amber-700 max-w-md">
+            <Clock size={20} className="shrink-0" />
+            <p className="text-sm font-medium">{queuedNotification}</p>
+            <button
+              onClick={() => setQueuedNotification(null)}
+              className="ml-2 p-1 hover:bg-amber-200 dark:hover:bg-amber-800 rounded-full transition-colors"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Sidebar - List of Conversations */}
       <div className={`flex-col w-full md:w-80 lg:w-96 border-r border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 h-full z-10 ${selectedChatId ? 'hidden md:flex' : 'flex'}`}>

@@ -38,6 +38,7 @@ export interface Conversation {
             name: string;
             avatar: string | null;
             public_key?: string;
+            encrypted_private_key?: string;
         };
     }>;
     last_message: Message | null;
@@ -62,7 +63,8 @@ const mapConversation = (c: any): Conversation => ({
         profile: {
             ...p.profile,
             avatar: getAvatarUrl(p.profile?.avatar, p.profile?.name),
-            public_key: p.profile?.public_key
+            public_key: p.profile?.public_key,
+            encrypted_private_key: p.profile?.encrypted_private_key
         }
     })),
     last_message: c.last_message ? mapMessage(c.last_message) : null

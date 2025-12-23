@@ -43,11 +43,30 @@ from .models import MentorApplication
 
 @admin.register(MentorApplication)
 class MentorApplicationAdmin(admin.ModelAdmin):
-    list_display = ('user', 'status_badge', 'university', 'created_at', 'cv_link')
-    list_filter = ('status', 'created_at')
+    list_display = ('user', 'status_badge', 'ai_status_badge', 'ai_validated', 'ai_score', 'university', 'created_at', 'cv_link', 'id_card_link')
+    list_filter = ('status', 'ai_status', 'ai_validated', 'created_at')
     search_fields = ('user__email', 'user__first_name', 'user__last_name', 'university')
-    readonly_fields = ('created_at', 'updated_at')
+    readonly_fields = ('created_at', 'updated_at', 'ai_status', 'ai_recommendation', 'ai_score', 'ai_validated')
     
+    fieldsets = (
+        ('Informations Utilisateur', {
+            'fields': ('user', 'university', 'bio', 'specialties', 'availability')
+        }),
+        ('Documents', {
+            'fields': ('cv_file', 'id_card_photo')
+        }),
+        ('Réseaux Sociaux', {
+            'fields': ('linkedin', 'twitter', 'website')
+        }),
+        ('Analyse IA (Automatique)', {
+            'fields': ('ai_status', 'ai_validated', 'ai_score', 'ai_recommendation'),
+            'description': 'Ces champs sont remplis automatiquement par l\'IA Gemini après la soumission.'
+        }),
+        ('Décision Admin', {
+            'fields': ('status', 'created_at', 'updated_at')
+        }),
+    )
+
     def status_badge(self, obj):
         colors = {
             'PENDING': 'orange',
@@ -61,13 +80,33 @@ class MentorApplicationAdmin(admin.ModelAdmin):
         )
     status_badge.short_description = 'Statut'
 
+    def ai_status_badge(self, obj):
+        colors = {
+            'PENDING': '#6b7280',    # gray-500
+            'PROCESSING': '#3b82f6', # blue-500
+            'COMPLETED': '#10b981',  # emerald-500
+            'FAILED': '#ef4444',     # red-500
+        }
+        return format_html(
+            '<span style="color: white; background-color: {}; padding: 2px 8px; border-radius: 8px; font-size: 11px; font-weight: 500;">{}</span>',
+            colors.get(obj.ai_status, 'gray'),
+            obj.get_ai_status_display()
+        )
+    ai_status_badge.short_description = 'Analyse IA'
+
     def cv_link(self, obj):
         if obj.cv_file:
-            return format_html('<a href="{}" target="_blank" style="background-color: #3b82f6; color: white; padding: 3px 8px; border-radius: 4px; text-decoration: none;">Voir le CV</a>', obj.cv_file.url)
+            return format_html('<a href="{}" target="_blank" style="background-color: #3b82f6; color: white; padding: 3px 8px; border-radius: 4px; text-decoration: none; font-size: 11px;">Voir CV</a>', obj.cv_file.url)
         return "-"
     cv_link.short_description = 'CV'
 
-    actions = ['approve_applications', 'reject_applications']
+    def id_card_link(self, obj):
+        if obj.id_card_photo:
+            return format_html('<a href="{}" target="_blank" style="background-color: #8b5cf6; color: white; padding: 3px 8px; border-radius: 4px; text-decoration: none; font-size: 11px;">Voir ID</a>', obj.id_card_photo.url)
+        return "-"
+    id_card_link.short_description = 'Photo ID'
+
+    actions = ['approve_applications', 'reject_applications', 'retry_ai_review']
 
     @admin.action(description='Approuver les candidatures sélectionnées')
     def approve_applications(self, request, queryset):
@@ -78,4 +117,16 @@ class MentorApplicationAdmin(admin.ModelAdmin):
     def reject_applications(self, request, queryset):
         updated = queryset.update(status='REJECTED')
         self.message_user(request, f"{updated} candidature(s) rejetée(s).")
+
+    @admin.action(description='Relancer l\'analyse IA')
+    def retry_ai_review(self, request, queryset):
+        from .services import MentorAIRewiewService
+        import threading
+        for instance in queryset:
+            thread = threading.Thread(
+                target=MentorAIRewiewService.review_application,
+                args=(instance.id,)
+            )
+            thread.start()
+        self.message_user(request, f"Analyse IA relancée pour {queryset.count()} candidature(s).")
 

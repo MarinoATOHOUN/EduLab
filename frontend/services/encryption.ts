@@ -41,24 +41,49 @@ export const encryptionService = {
         return null;
     },
 
-    // Initialiser le chiffrement (Générer si inexistant, et uploader la clé publique)
+    // Initialiser le chiffrement (Utiliser les clés du backend ou générer si nécessaire)
     initializeEncryption: async (): Promise<KeyPair> => {
+        // 1. Vérifier si on a des clés en localStorage
         let keys = encryptionService.getLocalKeys();
 
-        if (!keys) {
+        if (keys) {
+            return keys;
+        }
 
-            keys = await encryptionService.generateKeyPair();
-            encryptionService.saveKeysLocally(keys);
+        // 2. Récupérer l'utilisateur pour voir s'il a des clés sur le backend
+        try {
+            const user = await authService.getCurrentUser() as any;
 
-            // Upload public key to server
-            try {
-                await authService.updateProfile({
-                    public_key: keys.publicKey
-                });
+            if (user.profile?.public_key && user.profile?.encrypted_private_key) {
+                // Utiliser les clés du backend
+                keys = {
+                    publicKey: user.profile.public_key,
+                    privateKey: user.profile.encrypted_private_key
+                };
 
-            } catch (error) {
-                console.error('Erreur lors de l\'envoi de la clé publique', error);
+                // Les sauvegarder localement pour les prochaines fois
+                encryptionService.saveKeysLocally(keys);
+                console.log('Clés de chiffrement récupérées du backend');
+                return keys;
             }
+        } catch (error) {
+            console.error('Erreur lors de la récupération des clés du backend', error);
+        }
+
+        // 3. Si pas de clés du tout, générer localement (fallback)
+        console.warn('Génération de clés côté client (fallback)');
+        keys = await encryptionService.generateKeyPair();
+        encryptionService.saveKeysLocally(keys);
+
+        // Uploader la clé publique au serveur
+        try {
+            await authService.updateProfile({
+                public_key: keys.publicKey,
+                encrypted_private_key: keys.privateKey
+            });
+            console.log('Clés générées et envoyées au backend');
+        } catch (error) {
+            console.error('Erreur lors de l\'envoi des clés au backend', error);
         }
 
         return keys;

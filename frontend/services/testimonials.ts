@@ -1,5 +1,4 @@
-
-import api from './api';
+import api, { publicApi } from './api';
 
 export interface Testimonial {
     id: number;
@@ -13,7 +12,8 @@ export interface Testimonial {
 
 export const testimonialService = {
     getTestimonials: async (): Promise<Testimonial[]> => {
-        const response = await api.get('testimonials/');
+        const response = await publicApi.get('testimonials/');
         return response.data.results || response.data;
     }
 };
+

@@ -5,6 +5,7 @@ export { authService } from './auth';
 export { forumService } from './forum';
 export { mentorService } from './mentors';
 export { bookingsService } from './bookings';
+export type { Booking } from './bookings';
 export { opportunityService } from './opportunities';
 export { notificationService } from './notifications';
 export { messagingService } from './messaging';
